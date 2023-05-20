@@ -81,12 +81,12 @@ This steps requires some large memory, such as ~ 4 Gb. So your computer needs at
 :::
 
 ```{r}
-gencode <- import('gencode.v43.annotation.gff3')
+gencode_00 <- import('gencode.v43.annotation.gff3')
 ```
 
 ```{r}
 
-gencode2 <- gr_to_bed(gencode)
+gencode2 <- gr_to_bed(gencode_00)
 # dim(gencode2)
 
 ```
@@ -94,25 +94,25 @@ gencode2 <- gr_to_bed(gencode)
 Note: Not clear why gencode2 has only 8 columns, hence to include all features I did like this:
 
 ```{r}
-gencode3 <- as_tibble(gencode@elementMetadata)
+gencode3 <- as_tibble(gencode_00@elementMetadata)
 
 ```
 
 ```{r}
-gencode3b <- as_tibble(gencode@ranges@width, column_name = "width")
+gencode3b <- as_tibble(gencode_00@ranges@width, column_name = "width")
 ```
 
 ```{r}
-gencode4 <- bind_cols(gencode2, gencode3b,  gencode3)
+gencode <- bind_cols(gencode2, gencode3b,  gencode3)
 
 ```
 
-Finally, `gencode4` is the tibble used for the analysis
+Finally, `gencode` is the tibble used for the analysis
 
-Now, it is going to be extracted a random sample from 'gencode4' to simplify code creation:
+Now, it is going to be extracted a random sample from 'gencode' to simplify code creation:
 
 ```{r}
-gencode_s <- gencode4[sample(nrow(gencode4), size = 5000),]
+gencode_s <- gencode[sample(nrow(gencode), size = 5000),]
 
 ```
 
@@ -121,20 +121,20 @@ gencode_s <- gencode4[sample(nrow(gencode4), size = 5000),]
 4.1. What are the dimensions of this table?
 
 ```{r}
-# print("4.1. Dimensions of table gencode4 are:")
-dim(gencode4)
+# print("4.1. Dimensions of table gencode are:")
+dim(gencode)
 
 ```
 4.2. There are too many lines for the number of genes we expect for the human genome (_i.e_ ~ 20,000 genes). Look at the column `type`. What kind of data is this column?
 
 ```{r}
-type(gencode4[['type']])
+type(gencode[['type']])
 
 ```
 4.3. Display the levels of `type`
 
 ```{r}
-levels(gencode4[['type']])
+levels(gencode[['type']])
 
 ```
 ::: {.callout-tip}
@@ -156,9 +156,9 @@ Even if counting can be done manually with `dplyr`, try to be lazy and let `ggpl
 
 ```{r}
 
-# gencode4 gencode_s
+# gencode gencode_s
 
-plot_00 <- gencode4 |>
+plot_00 <- gencode |>
   mutate(type = fct_infreq(type)) |>
   ggplot(aes(x = type)) +
   geom_bar(fill = "Blue") +
@@ -241,7 +241,7 @@ Now, let's look at genes only.
 5.1. Filter the `gencode` to restrict rows where type is **gene**, save as `genes`
 
 ```{r}
-genes_00 <- filter(gencode4, type == "gene")
+genes_00 <- filter(gencode, type == "gene")
 ```
 
 5.2. Plot the counts of `gene_type` for `genes` in the same way you did the `type`. Sorting the counts. 
@@ -510,7 +510,7 @@ geneSize_00 <- mutate(geneSize_00, logSize = log10(value))
 7.1. Create Data Sample:
 
 ```{r}
-# gencode_s <- gencode4[sample(nrow(gencode4), size = 5000),]
+# gencode_s <- gencode[sample(nrow(gencode), size = 5000),]
 geneSize_S <- slice_sample(geneSize_00, n = 5000, replace = TRUE)
 
 ```
