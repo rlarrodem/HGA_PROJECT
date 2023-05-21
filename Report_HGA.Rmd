@@ -66,6 +66,20 @@ if (!require("BiocManager", quietly = TRUE))
 
 BiocManager::install("rtracklayer")
 
+```{r}
+url <- "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/gencode.v43.annotation.gff3.gz"
+
+```
+
+```{r}
+fPath <- "gencode.v43.annotation.gff3.gz"
+
+```
+
+```{r}
+download.file(url, destfile = fPath)
+```
+
 ## 3. Import the GFF file and converting to a 'tibble'
 
 - Import the GFF from GENCODE using the `import()` function from the package `rtracklayer`. Assign the result as `gencode`.
@@ -81,29 +95,13 @@ This steps requires some large memory, such as ~ 4 Gb. So your computer needs at
 :::
 
 ```{r}
-gencode_00 <- import('gencode.v43.annotation.gff3')
+data <- import(fPath, format = "gff")
 ```
 
-```{r}
-
-gencode2 <- gr_to_bed(gencode_00)
-# dim(gencode2)
-
-```
-
-Note: Not clear why gencode2 has only 8 columns, hence to include all features I did like this:
 
 ```{r}
-gencode3 <- as_tibble(gencode_00@elementMetadata)
-
-```
-
-```{r}
-gencode3b <- as_tibble(gencode_00@ranges@width, column_name = "width")
-```
-
-```{r}
-gencode <- bind_cols(gencode2, gencode3b,  gencode3)
+gencode <- as_tibble(data)
+head(gencode)
 
 ```
 
@@ -113,25 +111,24 @@ Now, it is going to be extracted a random sample from 'gencode' to simplify code
 
 ```{r}
 gencode_s <- gencode[sample(nrow(gencode), size = 5000),]
-
+head(gencode_s)
 ```
 
 ## 4. Explore the human genome
 
-4.1. What are the dimensions of this table?
+### 4.1. What are the dimensions of this table?
 
 ```{r}
-# print("4.1. Dimensions of table gencode are:")
 dim(gencode)
 
 ```
-4.2. There are too many lines for the number of genes we expect for the human genome (_i.e_ ~ 20,000 genes). Look at the column `type`. What kind of data is this column?
+### 4.2. There are too many lines for the number of genes we expect for the human genome (_i.e_ ~ 20,000 genes). Look at the column `type`. What kind of data is this column?
 
 ```{r}
 type(gencode[['type']])
 
 ```
-4.3. Display the levels of `type`
+### 4.3. Display the levels of `type`
 
 ```{r}
 levels(gencode[['type']])
@@ -152,7 +149,7 @@ Even if counting can be done manually with `dplyr`, try to be lazy and let `ggpl
 - large numbers are usually easier to read with thousand comma separators. `scales::comma()` does it for you
 :::
 
-4.4. Plot Distribution of Levels in Column `type`:
+### 4.4. Plot Distribution of Levels in Column `type`:
 
 ```{r}
 
@@ -173,11 +170,11 @@ plot_00 <- gencode |>
 plot_00
 ```
 
-4.5. From the previous plot, how many **gene** entries do you have?
+### 4.5. From the previous plot, how many **gene** entries do you have?
 
 From the previous plot, there are 62,703 **gene** entries in the dataset
 
-4.6. Plot the distribution of the number of transcripts per gene, highlight the mean and median
+### 4.6. Plot the distribution of the number of transcripts per gene, highlight the mean and median
 
 ::: {.callout-tip}
 The best columns for transcripts and genes are `transcripts_id` and `gene_id`.
@@ -202,7 +199,6 @@ Finally the plot:
 plot02 <- gene_00 |>
     ggplot(aes(x = n)) +
     geom_histogram(fill = "White", colour = "Blue", binwidth = 1) +
-    # xlim(min, max) +
     geom_vline(aes(xintercept=mean(n)), 
       color = "Red", 
       linetype = "dashed", 
@@ -211,26 +207,20 @@ plot02 <- gene_00 |>
       color = "Black", 
       linetype = "dashed", 
       linewidth = 1) +
-    # geom_histogram(aes(y = after_stat(density), colour="black", fill="white") +
-    # scale_x_discrete() +
     scale_x_continuous(breaks=seq(0, max(gene_00$n), by=1)) +
-    # scale_y_log10(labels = comma_format()) +
-    # scale_y_continuous(labels = comma_format()) +
-    # geom_text(aes(label = scales::comma(after_stat(count))), stat = "count", 
-    #   position = position_stack(vjust = 0.5), color = "Grey") +
     labs(x = "Number of Transcripts", y = "Count of Genes - log10") +
     theme_classic() +
     ggtitle(label = "Distribution of Genes by Number of Transcripts", 
-      subtitle = "Referential view of the quantity of genes in dataset grouped by the number    of transcripts they have")
+      subtitle = "Referential view of the quantity of genes in dataset grouped by the number of transcripts they have")
 plot02
 
 ```
 
-4.7. How many transcripts per gene do you observe using either the mean or the median in linear scale?
+### 4.7. How many transcripts per gene do you observe using either the mean or the median in linear scale?
 
 It seems like the average number of transcript per gene is 1 Transcript, and, at least 50% of the genes have only one Transcript
 
-4.8. How do you explain the discrepancy between mean or median?
+### 4.8. How do you explain the discrepancy between mean or median?
 
 Discrepancy among mean and median could be caused by the distribution asymmetry of feature `Number of Transcript per gene`
 
@@ -238,13 +228,13 @@ Discrepancy among mean and median could be caused by the distribution asymmetry 
 
 Now, let's look at genes only.
 
-5.1. Filter the `gencode` to restrict rows where type is **gene**, save as `genes`
+### 5.1. Filter the `gencode` to restrict rows where type is **gene**, save as `genes`
 
 ```{r}
 genes_00 <- filter(gencode, type == "gene")
 ```
 
-5.2. Plot the counts of `gene_type` for `genes` in the same way you did the `type`. Sorting the counts. 
+### 5.2. Plot the counts of `gene_type` for `genes` in the same way you did the `type`. Sorting the counts. 
 You can restrict to counts > 500 to avoid showing all the smaller categories
 
 ```{r}
@@ -266,14 +256,13 @@ plot05 <- ggplot(top500, aes(f, n)) +
   theme_classic() +
   ggtitle(label = "Counting of Type of Genes", 
     subtitle = "Referential view of Type Genes Distribution")
-
 plot05
 
 ```
 
 We can observe quite many unique `gene_type`, even restriction to the ones that are present > 500 times.
 
-5.3. Collapse the levels of `gene_type` to create 4 meta-categories:
+### 5.3. Collapse the levels of `gene_type` to create 4 meta-categories:
     + protein_coding as **prot_coding**
     + pseudogene as **pseudo**
     + **RNA**
@@ -309,49 +298,55 @@ genes_01
 
 ```
 
+```{r}
+plot_MetaC <- ggplot(genes_01, aes(f, n)) +
+  geom_col(fill = "Blue") +
+  scale_y_continuous(labels = comma_format()) +
+  geom_text(aes(label = scales::comma(n)), stat = "identity",
+    position = position_stack(vjust = 0.5), color = "Grey") +
+  coord_flip() +
+  labs(x = "Meta Category", y = "Count") +
+  theme_classic() +
+  ggtitle(label = "Counting of Type of Genes", 
+    subtitle = "Counting by Meta Category")
+plot_MetaC
+
+```
+
+
 ## 6. Genes per chromosome
 
 Are the genes uniformly distributed across the genome? To address this question, we want to count the number of genes per chromosome and normalizing by the chromosome length.
 
 You can use this [file from USCS](http://hgdownload-test.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes) to get the chromosome sizes.
 
-6.0. Data Engineering:
+### 6.0. Data Engineering:
 6.0.1. Getting the Chromosome Sizes Data.
 
 ```{r}
-# url1 = 'http://hgdownload-test.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes'
-# read_html(url1)
-
-# h1 <- GET(url1=url1, verbose(), config(cainfo="cacert.pem"))
-#     h2 <- content(h1, as="text")
-#    df <- fromJSON(h2)
-#    output$table <- renderDataTable({df})
-
-```
-
-
-```{r}
-path_00 = "C:/Users/milagros/Documents/GEN_PROJECT_230501/H_Gen_RL/hg38.txt"
-```
-
-```{r}
-chSize_00 <- as_tibble(read.table(path_00, header = FALSE, sep = "\t"))
+url1 = 'https://hgdownload-test.gi.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes'
 
 ```
 
 ```{r}
-chr_01 <- fct_count(genes_00$chrom, sort = FALSE, prop = FALSE)
+chSize_00 <- as_tibble(read.table(url1, header = FALSE, sep = "\t"))
+
+```
+
+```{r}
+chr_01 <- fct_count(genes_00$seqnames, sort = FALSE, prop = FALSE)
+
 ```
 
 ```{r}
 chrGMeta <- genes_00 |>
   group_by(meta_categories) |>
-  count(chrom)
+  count(seqnames)
 ```
 
 6.0.2. Merging Datas
 ```{r}
-chSize_01 <- left_join(chrGMeta, chSize_00, by = c("chrom" = "V1"))
+chSize_01 <- left_join(chrGMeta, chSize_00, by = c("seqnames" = "V1"))
 
 ```
 
@@ -363,7 +358,7 @@ chSize_01 <- mutate(chSize_01, dGen_norm = 1000000*(n/V2))
 
 
 ```{r}
-chr_01 <- fct_count(genes_00$chrom, sort = FALSE, prop = FALSE)
+chr_01 <- fct_count(genes_00$seqnames, sort = FALSE, prop = FALSE)
 
 ```
 
@@ -378,7 +373,7 @@ chr_02 <- mutate(chr_02, dGen_norm = 1000000*(n/V2))
 ```
 
 
-6.1. Plot the gene density per chromosome and facet per the 4 meta categories
+### 6.1. Plot the gene density per chromosome and facet per the 4 meta categories
 ::: {.callout-tip}
 - For the chromosome sizes, the file is a tabulated file with no header. You can delete all the random and unplaced contigs and keep only the 23 chromosomes + the mitochondria. See example below 
 - Dor the density, express the number of genes per mega-bases
@@ -436,12 +431,13 @@ plot_Facet <- ggplot(data = chSize_01) +
 plot_Facet
 
 ```
-6.2. Leaving out the **pseudogene** and **other** categories, what is striking in the results? What is so special with the MT?
+
+### 6.2. Leaving out the **pseudogene** and **other** categories, what is striking in the results? What is so special with the MT?
 
 6.2.1. Re-plot filtering out the mitochondria and keeping only **prot_coding** and **RNA**
 
 ```{r}
-chSize_02 <- filter(chSize_01, meta_categories %in% c("RNA", "prot_coding"))
+chSize_02 <- filter(chSize_01, meta_categories %in% c("RNA", "prot_coding"), seqnames != "chrM")
 
 ```
 
@@ -458,9 +454,9 @@ plot_Facet_02 <- ggplot(data = chSize_02) +
       color = "Black", 
       linetype = "dashed", 
       linewidth = .2) +
-  scale_x_continuous(breaks=seq(0, max(chSize_02$dGen_norm)+100, by = 100), labels = comma_format()) +
+  scale_x_continuous(breaks=seq(0, max(chSize_02$dGen_norm)), labels = comma_format()) +
   theme_classic() +
-  labs(title = "Gene Density per Chromosome",
+  labs(title = "Gene Density per Chromosome Excluding ChrM",
     subtitle = "Breakdown per Meta_Categories",
     x = "Count of Genes per Mega-Bases",
     y = "Density of Chromosomes") +
@@ -469,19 +465,24 @@ plot_Facet_02 <- ggplot(data = chSize_02) +
 plot_Facet_02
 
 ```
+
 6.2.2. What is the chromosome with the highest gene density?
 
-Global Data:
 ```{r}
-chr_Highest <- slice_max(chr_02, dGen_norm)
+chr_Highest <- slice_max(chSize_02, dGen_norm)
 chr_Highest
 ```
+
+For Meta_Categories, "RNA" and "prot_coding", the chromosome with the highest gene density is chr19 (after exclusion of chrM)
+
 
 Breakdown by Meta_Category:
 ```{r}
 chr_H_MetaC <- slice_max(chSize_01, dGen_norm)
 chr_H_MetaC
 ```
+
+If all Meta_Categories are compared, and chrM is not excluded, then, the chromosomes with the highest gene density are chr19 ("RNA", "pseudo") and chrM (prot_coding", "rest")
 
 ## 7. Gene sizes
 
@@ -497,17 +498,17 @@ Also, we keep the 4 meta-categories previously obtained since they represent dif
 :::
 
 ```{r}
-geneSize_00 <- select(genes_00, gene_id, gene_name, meta_categories, value)
+geneSize_00 <- select(genes_00, gene_id, gene_name, meta_categories, width)
 
 ```
 
 ```{r}
-geneSize_00 <- mutate(geneSize_00, logSize = log10(value))
+geneSize_00 <- mutate(geneSize_00, logSize = log10(width))
 # describe(geneSize_00)
 
 ```
 
-7.1. Create Data Sample:
+### 7.1. Create Data Sample:
 
 ```{r}
 # gencode_s <- gencode[sample(nrow(gencode), size = 5000),]
@@ -516,17 +517,17 @@ geneSize_S <- slice_sample(geneSize_00, n = 5000, replace = TRUE)
 ```
 
 
-7.2. Plot:
+### 7.2. Plot:
 
 ```{r}
-plot_Filled_03 <- ggplot(data = geneSize_S) +
-  aes(x = value, fill = meta_categories) +
+plot_Filled_03 <- ggplot(data = geneSize_00) +
+  aes(x = width, fill = meta_categories) +
   geom_density(alpha = .2) +
-  geom_vline(aes(xintercept=mean(value)), 
+  geom_vline(aes(xintercept=mean(width)), 
       color = "Red", 
       linetype = "dashed", 
       linewidth = .2) +
-  geom_vline(aes(xintercept=median(value)), 
+  geom_vline(aes(xintercept=median(width)), 
       color = "Black", 
       linetype = "dashed", 
       linewidth = .2) +
@@ -540,19 +541,18 @@ plot_Filled_03 <- ggplot(data = geneSize_S) +
     subtitle = "Breakdown per Meta_Categories",
     x = "Size of Genes log",
     y = "Density of Genes")
-  # facet_wrap(meta_categories ~ ., ncol = 1, nrow = 4)
 
 plot_Filled_03
 
 ```
 
-7.3. Which meta-category has the most normal distribution after log-transformation? And the largest average size?
+### 7.3. Which meta-category has the most normal distribution after log-transformation? And the largest average size?
 
 Average Comparison:
 ```{r}
 geneGMeta <- geneSize_00 |>
   group_by(meta_categories) |>
-  summarise(avgSize = mean(value))
+  summarise(avgSize = mean(width))
 geneGMeta
 
 ```
@@ -565,6 +565,7 @@ TopAvg
 
 Visualization of plots suggest that:
 a. Distribution of group "prot_coding" looks like the most different of all the analysed Meta-Categories, because: 
+
 a.1. It has the largest average, 
 a.2. Its shape is more similar to the normal distribution than the shape of the other Meta-Categories, 
 a.3. It seems it has only one mode 
@@ -574,13 +575,13 @@ b. The distribution for the rest of the groups is slightly similar among them be
 b.1. Closer means, 
 b.2. Their extreme values are on their right side (the highest ones). b.3. All three have different shapes with two or more modes(because each of them contains more than one sub-category, perhaps with different distributions.
 
-7.4. What is roughly the **mode** of this normal distribution after log-transformation?
+### 7.4. What is roughly the **mode** of this normal distribution after log-transformation?
 
 ```{r message = FALSE, warning = FALSE}
 mc = "prot_coding"
 
-mode_x <- mlv(filter(geneSize_00, meta_categories %in% c(mc))$value)
-mean_x <- mean(filter(geneSize_00, meta_categories %in% c(mc))$value)
+mode_x <- mlv(filter(geneSize_00, meta_categories %in% c(mc))$width)
+mean_x <- mean(filter(geneSize_00, meta_categories %in% c(mc))$width)
 mode_lgx <- mlv(filter(geneSize_00, meta_categories %in% c(mc))$logSize)
 mean_lgx <- mean(filter(geneSize_00, meta_categories %in% c(mc))$logSize)
 
