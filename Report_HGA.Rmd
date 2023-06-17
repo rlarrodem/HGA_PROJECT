@@ -20,30 +20,56 @@ output:
 ## 1. Setup a project repository
 
 ### 1.1. Library Instaling:
-```{r}
-# install.packages('tidyverse')
-# install.packages("httr")
-# install.packages("valr")
-# install.packages("ggplot2")
-# install.packages("Hmisc")
-# install.packages("nortest")
-# install.packages("modeest")
+
+```{r message = FALSE, warning = FALSE}
+# Required standard libraries
+
+libs_01 <- c("tidyverse", "httr", "rvest", "valr", "forcats", "scales", "ggplot2", "Hmisc", "nortest", "modeest", "remotes")
+
+# Checking installed standard libs
+missing_libs <- libs_01[!sapply(libs_01, requireNamespace, quietly = TRUE)]
+
+# Installing of missing libs
+if (length(missing_libs) > 0) {
+  install.packages(missing_libs)
+  text_01 <- "Libraries just installed"
+} else {
+  text_01 <- "Libraries previously installed"
+}
+print(text_01)
+
+```
+
+```{r message = FALSE, warning = FALSE}
+# Checking and installation of required specialized libraries - BiocManager
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+```
+
+
+```{r message = FALSE, warning = FALSE}
+# Checking and installation of required specialized libraries - rtracklayer
+
+if (!require("rtracklayer", quietly = TRUE))
+    BiocManager::install("rtracklayer")
 
 ```
 
 ### 1.2. Library Activation:
+
 ```{r message = FALSE, warning = FALSE}
-library(tidyverse)
-library(httr)
-library(rvest)
-library(valr)
-library(forcats)
-library(scales)
-library(ggplot2)
-library(Hmisc)
-library(rtracklayer)
-library(nortest)
-library(modeest)
+
+libraries <- c("tidyverse", "httr", "rvest", "valr", "forcats", "scales", "ggplot2", "Hmisc", "nortest", "modeest", "remotes", "rtracklayer")
+inactive_libraries <- libraries[!sapply(libraries, function(x) is.element(x, search()))]
+if (length(inactive_libraries) > 0) {
+  lapply(inactive_libraries, require, character.only = TRUE)
+  message <- "Libraries just activated"
+} else {
+  message <- "Libraries previously activated"
+}
+print(message)
 
 ```
 
@@ -68,18 +94,14 @@ BiocManager::install("rtracklayer")
 
 ```{r}
 url <- "https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_43/gencode.v43.annotation.gff3.gz"
-
-```
-
-```{r}
 fPath <- "gencode.v43.annotation.gff3.gz"
 
+if (!file.exists(fPath)) {
+  download.file(url, destfile = fPath)
+} else {
+  print("Data file already available")
+}
 ```
-
-```{r}
-download.file(url, destfile = fPath)
-```
-
 ## 3. Import the GFF file and converting to a 'tibble'
 
 - Import the GFF from GENCODE using the `import()` function from the package `rtracklayer`. Assign the result as `gencode`.
@@ -95,14 +117,28 @@ This steps requires some large memory, such as ~ 4 Gb. So your computer needs at
 :::
 
 ```{r}
-data <- import(fPath, format = "gff")
+# Import data
+if ("data" %in% ls()) {
+  message("Data previously imported and available in the project.")
+} else {
+  data <- import(fPath, format = "gff")
+
+  message("Data already imported and available in the project.")
+}
+
+# data <- import(fPath, format = "gff")
 ```
 
-
 ```{r}
-gencode <- as_tibble(data)
-head(gencode)
+if ("gencode" %in% ls()) {
+  message("Tibble 'gencode' already exists in the project.")
+} else {
+  gencode <- as_tibble(data)
+  message("Tibble 'gencode' created.")
+}
 
+# gencode <- as_tibble(data)
+head(gencode)
 ```
 
 Finally, `gencode` is the tibble used for the analysis
